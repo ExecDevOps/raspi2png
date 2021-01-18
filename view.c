@@ -8,14 +8,26 @@ char VIEW_PAGE[] = ""\
 "			canvas.style.position = 'absolute';\n"\
 "			canvas.style.top = '0px';\n"\
 "			canvas.style.left = '0px';\n"\
+"			canvas.style.height = '100%';\n"\
 "			canvas.style.width = '100%';\n"\
 "			document.body.onkeypress = function(e) {\n"\
-"				if (e.key == 'f') {\n"\
-"					if (canvas.style.width == '') {\n"\
-"						canvas.style.width = '100%';\n"\
-"					} else {\n"\
+"				switch (e.key) {\n"\
+"					case '1':\n"\
 "						canvas.style.width = '';\n"\
-"					}\n"\
+"						canvas.style.height = '';\n"\
+"					break;\n"\
+"					case '2':\n"\
+"						canvas.style.width = '100%';\n"\
+"						canvas.style.height = '';\n"\
+"					break;\n"\
+"					case '3':\n"\
+"						canvas.style.width = '';\n"\
+"						canvas.style.height = '100%';\n"\
+"					break;\n"\
+"					case '4':\n"\
+"						canvas.style.width = '100%';\n"\
+"						canvas.style.height = '100%';\n"\
+"					break;\n"\
 "				}\n"\
 "			}\n"\
 "			var img = document.createElement('img');\n"\
