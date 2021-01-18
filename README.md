@@ -2,6 +2,8 @@
 
 Utility to take a snapshot of the raspberry pi screen and save it as a PNG file
 
+Modified fork to allow streaming. 
+
     Usage: raspi2png [--pngname name] [--width <width>] [--height <height>] [--compression <level>] [--delay <delay>] [--display <number>] [--stdout] [--help]
 
     --pngname,-p - name of png file to create (default is snapshot.png)
@@ -12,6 +14,13 @@ Utility to take a snapshot of the raspberry pi screen and save it as a PNG file
     --display,-D - Raspberry Pi display number (default 0)
 	--stdout,-s - write file to stdout
     --help,-H - print this usage information
+
+    Streaming usage:
+         Stream the contents of the screen to the web browser at http://ip_address:port_number/view
+
+         raspi2png stream - Start a stream on port 8888
+         raspi2png stream [port] - Start a stream on port [port]
+         raspi2png stop - Stop a running stream
 
 ## Simple Install
 

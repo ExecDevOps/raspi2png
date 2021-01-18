@@ -96,6 +96,7 @@ usage(void)
     fprintf(stderr, "\n");
 
     fprintf(stderr, "Streaming usage: \n");
+    fprintf(stderr, "    Streams the contents of the screen to the web browser at http://ip_address:port_number/view\n");
     fprintf(stderr, "\n");
 
     fprintf(stderr, "    %s stream - Start streaming on port 8888\n", program);
