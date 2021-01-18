@@ -36,8 +36,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <zlib.h>
-
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <microhttpd.h>
 #include "bcm_host.h"
+#include "view.c"
 
 //-----------------------------------------------------------------------
 
@@ -50,7 +55,6 @@
 #define DEFAULT_DELAY 0
 #define DEFAULT_DISPLAY_NUMBER 0
 #define DEFAULT_NAME "snapshot.png"
-
 //-----------------------------------------------------------------------
 
 const char* program = NULL;
@@ -89,15 +93,23 @@ usage(void)
     fprintf(stderr, "    --stdout,-s - write file to stdout\n");
 
     fprintf(stderr, "    --help,-H - print this usage information\n");
+    fprintf(stderr, "\n");
 
+    fprintf(stderr, "Streaming usage: \n");
+    fprintf(stderr, "\n");
+
+    fprintf(stderr, "    %s stream - Start streaming on port 8888\n", program);
+    fprintf(stderr, "    %s stream [port] - Start streaming on port [port]\n", program);
+    fprintf(stderr, "    %s stop - Stop streaming\n", program);
     fprintf(stderr, "\n");
 }
 
 
 //-----------------------------------------------------------------------
 
+char* DEFAULT_ARGV_BASE;
 int
-main(
+snapshot(
     int argc,
     char *argv[])
 {
@@ -166,7 +178,6 @@ main(
             break;
 
         case 'p':
-
             pngName = optarg;
             break;
 
@@ -578,3 +589,187 @@ main(
     return 0;
 }
 
+void GetImagePath(char *str) {
+	char fname[] = ".raspi2png_stream.png";
+	char* home = getenv("HOME");
+	if (home[strlen(home) - 1] != '/') {
+		sprintf(str, "%s/%s%c", home, fname, 0);
+	} else {
+		sprintf(str, "%s%s%c", home, fname, 0);
+	}
+}
+void GetPIDPath(char *str) {
+	char fname[] = ".raspi2png_procid.png";
+	char* home = getenv("HOME");
+	if (home[strlen(home) - 1] != '/') {
+		sprintf(str, "%s/%s%c", home, fname, 0);
+	} else {
+		sprintf(str, "%s%s%c", home, fname, 0);
+	}
+}
+int streamExists() {
+	char fpath[256];
+	GetPIDPath(fpath);
+	if (access(fpath, F_OK) != 0) {
+		return 0;
+	}
+	return 1;
+}
+int stopStream(int verbose) {
+	char fpath[256];
+	GetImagePath(fpath);
+	remove(fpath);
+	GetPIDPath(fpath);
+	if (access(fpath, F_OK) != 0) {
+		if (verbose) {
+			fprintf(stderr, "No ongoing stream detected.\n");
+		}
+		return 1;
+	}
+	if (verbose) {
+		char cmd[512];
+		sprintf(cmd, "kill -9 $(cat '%s') 2>/dev/null", fpath);
+		system(cmd);
+	}
+	remove(fpath);
+	return 0;
+}
+int Connection_Callback(
+	void *cls,
+	struct MHD_Connection *conn,
+	const char *url,
+	const char *method,
+	const char *version,
+	const char *upload_data,
+	size_t *upload_data_size,
+	void **con_cls
+) {
+	const char *pageNotFound = "<html><body><h1>404 Page not found.</h1></body></html>";
+	int ret = MHD_NO;
+	struct MHD_Response *response = NULL;
+	if (strcmp(method, "GET") == 0) {
+		if (strcmp(url, "/view") == 0) {
+			response = MHD_create_response_from_buffer(
+				strlen(VIEW_PAGE),
+				(void*)VIEW_PAGE,
+				MHD_RESPMEM_PERSISTENT
+			);
+			ret = MHD_queue_response(conn, MHD_HTTP_OK, response);
+		} else if (strcmp(url, "/screen") == 0) {
+			char path[256];
+			GetImagePath(path);
+			char* argv[3];
+			argv[0] = DEFAULT_ARGV_BASE;
+			argv[1] = "-p";
+			argv[2] = path;
+			program = NULL;
+			optind = 1;
+			snapshot(3, argv);
+			int fd = open(path, O_RDONLY);
+			if (fd == 0) {
+				fprintf(stderr, "Permission error.\n");
+				stopStream(0);
+				exit(1);
+			}
+			struct stat buf;
+			fstat(fd, &buf);
+			response = MHD_create_response_from_fd_at_offset64(buf.st_size, fd, 0);
+			MHD_add_response_header(response, "Content-Type", "image/png");
+			ret = MHD_queue_response(conn, MHD_HTTP_OK, response);
+		} else {
+			response = MHD_create_response_from_buffer(
+				strlen(pageNotFound),
+				(void*)pageNotFound,
+				MHD_RESPMEM_PERSISTENT
+			);
+			ret = MHD_queue_response(conn, 404, response);
+		}
+	} else if (strcmp(method, "POST") == 0) {
+		static char* data;
+		static size_t data_size;
+		if (*con_cls == (void*)0) {
+			*con_cls = (void*)1;
+			data = malloc(0);
+			data_size = 0;
+			return MHD_YES;
+		} else if (*upload_data_size > 0) {
+			data_size += *upload_data_size;
+			if (realloc(data, data_size) == NULL) {
+				fprintf(stderr, "Severe memory error.\n");
+				stopStream(0);
+				exit(1);
+			}
+			memcpy(data + (data_size - *upload_data_size), upload_data, *upload_data_size);
+			*upload_data_size = 0; //this is necessary for the next recursion to be called
+			return MHD_YES;
+		} else {
+			if (realloc(data, data_size + 1) == NULL) {
+				fprintf(stderr, "Severe memory error.\n");
+				stopStream(0);
+				exit(1);
+			}
+			data[data_size] = 0;
+			free(data);
+			response = MHD_create_response_from_buffer(
+				strlen(pageNotFound),
+				(void*)pageNotFound,
+				MHD_RESPMEM_PERSISTENT
+			);
+			ret = MHD_queue_response(conn, MHD_HTTP_OK, response);
+		}
+	}
+	if (response != NULL) {
+		MHD_destroy_response(response);
+	}
+	return ret;
+}
+int stream(int argc, char** argv) {
+	if (streamExists()) {
+		fprintf(stderr, "A stream is already running.\n");
+		return 1;
+	}
+	pid_t procid = getpid();
+	char fpath[256];
+	GetPIDPath(fpath);
+	FILE* file = fopen(fpath, "wb");
+	if (file == NULL) {
+		fprintf(stderr, "Permission error.\n");
+		return 1;
+	}
+	fprintf(file, "%i\n", procid);
+	fclose(file);
+	int port = 8888;
+	if (argc >= 3) {
+		port = atoi(argv[2]);
+	}
+	//printf("Starting stream on port %i...", port);
+	struct MHD_Daemon* d = MHD_start_daemon(
+		MHD_USE_THREAD_PER_CONNECTION,
+		port,
+		NULL,
+		NULL,
+		&Connection_Callback,
+		NULL,
+		MHD_OPTION_END
+	);
+	if (d == NULL) {
+		fprintf(stderr, "Failed to start daemon.\n");
+		stopStream(0);
+		return 1;
+	}
+	while (true);
+	MHD_stop_daemon(d);
+	return 0;
+}
+int main(int argc, char** argv) {
+	DEFAULT_ARGV_BASE = argv[0];
+	if (argc < 2) {
+		return snapshot(argc, argv);
+	} else if (strcmp(argv[1], "stop") == 0) {
+		return stopStream(1);
+	} else if (strcmp(argv[1], "stream") != 0) {
+		return snapshot(argc, argv);
+	} else {
+		return stream(argc, argv);
+	}
+}
