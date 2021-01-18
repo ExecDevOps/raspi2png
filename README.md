@@ -2,7 +2,8 @@
 
 Utility to take a snapshot of the raspberry pi screen and save it as a PNG file
 
-Modified fork to allow streaming. 
+Modified fork to allow streaming. The streams can be viewed from any computer on the local network in the web browser. This is just an experiment. Framerate is rather low. See the video below. Scaling down the resolution seems to speed up the framerate but of course at quality loss. While you can view the stream at /view, the direct images themselves are uploaded at /screen. Making a separate program to view them that runs natively and not in the browser might see better framerates. In the future I would like to also update this to allow controlling the Pi through the browser as well.
+
 
     Usage: raspi2png [--pngname name] [--width <width>] [--height <height>] [--compression <level>] [--delay <delay>] [--display <number>] [--stdout] [--help]
 
@@ -20,6 +21,7 @@ Modified fork to allow streaming.
 
          raspi2png stream - Start a stream on port 8888
          raspi2png stream [port] - Start a stream on port [port]
+         raspi2png stream [port] [scale] - Scale the resolution by a factor
          raspi2png stop - Stop a running stream
 
 ## Simple Install
