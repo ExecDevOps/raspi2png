@@ -101,6 +101,7 @@ usage(void)
 
     fprintf(stderr, "    %s stream - Start streaming on port 8888\n", program);
     fprintf(stderr, "    %s stream [port] - Start streaming on port [port]\n", program);
+    fprintf(stderr, "    %s stream [port] [scale] - Scale the resolution by a factor\n", program);
     fprintf(stderr, "    %s stop - Stop streaming\n", program);
     fprintf(stderr, "\n");
 }
@@ -108,6 +109,7 @@ usage(void)
 
 //-----------------------------------------------------------------------
 
+float REQUESTED_SCALING;
 char* DEFAULT_ARGV_BASE;
 int
 snapshot(
@@ -247,6 +249,11 @@ snapshot(
 
     int32_t pngWidth = modeInfo.width;
     int32_t pngHeight = modeInfo.height;
+
+    if (REQUESTED_SCALING != 1) {
+      requestedWidth = pngWidth * REQUESTED_SCALING;
+      requestedHeight = pngHeight * REQUESTED_SCALING;
+    }
 
     if (requestedWidth > 0)
     {
@@ -743,6 +750,18 @@ int stream(int argc, char** argv) {
 	if (argc >= 3) {
 		port = atoi(argv[2]);
 	}
+	if (argc >= 4) {
+		REQUESTED_SCALING = atof(argv[3]);
+		if (REQUESTED_SCALING > 1) {
+			fprintf(stderr, "Scaling factor cannot be greater than 1.\n");
+			stopStream(0);
+			return 1;
+		} else if (REQUESTED_SCALING <= 0) {
+			fprintf(stderr, "The scaling factor cannot be less than or equal to zero.\n");
+			stopStream(0);
+			return 1;
+		}
+	}
 	//printf("Starting stream on port %i...", port);
 	struct MHD_Daemon* d = MHD_start_daemon(
 		MHD_USE_THREAD_PER_CONNECTION,
@@ -763,6 +782,7 @@ int stream(int argc, char** argv) {
 	return 0;
 }
 int main(int argc, char** argv) {
+	REQUESTED_SCALING = 1;
 	DEFAULT_ARGV_BASE = argv[0];
 	if (argc < 2) {
 		return snapshot(argc, argv);
