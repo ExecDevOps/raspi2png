@@ -10,6 +10,15 @@ char VIEW_PAGE[] = ""\
 "			canvas.style.left = '0px';\n"\
 "			canvas.style.height = '100%';\n"\
 "			canvas.style.width = '100%';\n"\
+"			var FULL_SCREEN = false;\n"\
+"			document.body.onmouseup = function(e) {\n"\
+"				FULL_SCREEN = !FULL_SCREEN;\n"\
+"				if (FULL_SCREEN) {\n"\
+"					document.body.requestFullscreen();\n"\
+"				} else {\n"\
+"					document.exitFullscreen();\n"\
+"				}\n"\
+"			}\n"\
 "			document.body.onkeypress = function(e) {\n"\
 "				switch (e.key) {\n"\
 "					case '1':\n"\
