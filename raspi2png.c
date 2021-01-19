@@ -40,6 +40,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <microhttpd.h>
 #include "bcm_host.h"
 #include "view.c"
@@ -102,6 +104,7 @@ usage(void)
     fprintf(stderr, "    %s stream - Start streaming on port 8888\n", program);
     fprintf(stderr, "    %s stream [port] - Start streaming on port [port]\n", program);
     fprintf(stderr, "    %s stream [port] [scale] - Scale the resolution by a factor\n", program);
+    fprintf(stderr, "    %s stream [port] [scale] [ip_addr] - Only allow a specific IP to connect\n", program);
     fprintf(stderr, "    %s stop - Stop streaming\n", program);
     fprintf(stderr, "\n");
 }
@@ -642,7 +645,32 @@ int stopStream(int verbose) {
 	remove(fpath);
 	return 0;
 }
-int Connection_Callback(
+/*int ConnInfo_Callback(
+	void *cls,
+	enum MHD_ValueKind kind,
+	const char *key,
+	const char *value
+) {
+	printf("[%s] %s\n", key, value);
+	return MHD_YES;
+}*/
+char ALLOWED_IP[32];
+int ConnInit_Callback (
+	void *cls,
+	const struct sockaddr *addr,
+	socklen_t addrlen
+) {
+	if (strlen(ALLOWED_IP) == 0) {
+		return MHD_YES;
+	}
+	struct sockaddr_in* sock = (struct sockaddr_in*)addr;
+	if (strcmp(inet_ntoa(sock->sin_addr), ALLOWED_IP) == 0) {
+		return MHD_YES;
+	}
+	return MHD_NO;
+}
+
+int ConnProc_Callback(
 	void *cls,
 	struct MHD_Connection *conn,
 	const char *url,
@@ -652,6 +680,7 @@ int Connection_Callback(
 	size_t *upload_data_size,
 	void **con_cls
 ) {
+	//MHD_get_connection_values(conn, MHD_HEADER_KIND, &ConnInfo_Callback, NULL);
 	const char *pageNotFound = "<html><body><h1>404 Page not found.</h1></body></html>";
 	int ret = MHD_NO;
 	struct MHD_Response *response = NULL;
@@ -762,13 +791,16 @@ int stream(int argc, char** argv) {
 			return 1;
 		}
 	}
+	if (argc >= 5) {
+		memcpy(ALLOWED_IP, argv[4], strlen(argv[4]) + 1);
+	}
 	//printf("Starting stream on port %i...", port);
 	struct MHD_Daemon* d = MHD_start_daemon(
 		MHD_USE_THREAD_PER_CONNECTION,
 		port,
+		&ConnInit_Callback,
 		NULL,
-		NULL,
-		&Connection_Callback,
+		&ConnProc_Callback,
 		NULL,
 		MHD_OPTION_END
 	);
@@ -782,6 +814,7 @@ int stream(int argc, char** argv) {
 	return 0;
 }
 int main(int argc, char** argv) {
+	ALLOWED_IP[0] = 0;
 	REQUESTED_SCALING = 1;
 	DEFAULT_ARGV_BASE = argv[0];
 	if (argc < 2) {

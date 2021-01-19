@@ -24,6 +24,7 @@ https://www.youtube.com/watch?v=xObCfv0EEIE
          raspi2png stream - Start a stream on port 8888
          raspi2png stream [port] - Start a stream on port [port]
          raspi2png stream [port] [scale] - Scale the resolution by a factor
+         raspi2png stream [port] [scale] [ip_addr] - Only allow a specific IP to connect
          raspi2png stop - Stop a running stream
 
 ## Simple Install
