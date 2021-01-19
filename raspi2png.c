@@ -607,7 +607,7 @@ void GetImagePath(char *str) {
 	}
 }
 void GetPIDPath(char *str) {
-	char fname[] = ".raspi2png_procid.png";
+	char fname[] = ".raspi2png_procid.log";
 	char* home = getenv("HOME");
 	if (home[strlen(home) - 1] != '/') {
 		sprintf(str, "%s/%s%c", home, fname, 0);
