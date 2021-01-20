@@ -39,9 +39,9 @@ curl -sL https://raw.githubusercontent.com/AndrewFromMelbourne/raspi2png/master/
 
 ## Manual Building
 
-You will need to install libpng before you build the program. On Raspbian
+You will need to install libpng,  libmicrohttpd, and libdevdev before you build the program. On Raspbian
 
-sudo apt-get install libpng12-dev
+sudo apt-get install libpng12-dev libmicrohttpd-dev libevdev-dev
 
 Then just type 'make' in the raspi2png directory you cloned from github.
 
