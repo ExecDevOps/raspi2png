@@ -45,3 +45,24 @@ sudo apt-get install libpng12-dev
 
 Then just type 'make' in the raspi2png directory you cloned from github.
 
+Usage: raspi2png [--pngname name] [--width <width>] [--height <height>] [--compression <level>] [--delay <delay>] [--display <number>] [--stdout] [--help]
+
+    --pngname,-p - name of png file to create (default is snapshot.png)
+    --height,-h - image height (default is screen height)
+    --width,-w - image width (default is screen width)
+    --compression,-c - PNG compression level (0 - 9)
+    --delay,-d - delay in seconds (default 0)
+    --display,-D - Raspberry Pi display number (default 0)
+    --stdout,-s - write file to stdout
+    --help,-H - print this usage information
+
+Streaming usage: 
+    Streams the contents of the screen to the web browser at http://ip_address:port_number/view
+
+    raspi2png stream - Start streaming on port 8888
+    raspi2png stream [port] - Start streaming on port [port]
+    raspi2png stream [port] [quality] - Stream quality, e.g. 0.5 for 50% or 1 for 100%
+    raspi2png stream [port] [quality] [ip_addr] - Only allow a specific IP to connect
+    raspi2png stream [port] [quality] [ip_addr] [control] - Use 1 for the control to enable keyboard input
+    raspi2png stop - Stop streaming
+
