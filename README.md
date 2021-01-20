@@ -2,9 +2,13 @@
 
 Utility to take a snapshot of the raspberry pi screen and save it as a PNG file
 
-Modified fork to allow streaming. The streams can be viewed from any computer on the local network in the web browser. This is just an experiment. Framerate is rather low. See the video below. Scaling down the resolution seems to speed up the framerate but of course at quality loss. While you can view the stream at /view, the direct images themselves are uploaded at /screen. Making a separate program to view them that runs natively and not in the browser might see better framerates. In the future I would like to also update this to allow controlling the Pi through the browser as well.
+Modified fork to allow streaming. The streams can be viewed from any computer on the local network in the web browser, or you can restrict viewing to a specific IP address and it will refuse connections from other devices. Performance is not very high, so using the "scale" parameter to reduce the quality (such as 0.5 for 50% quality) and turning down the Raspberry Pi's resolution in `raspi-config` (and scaling up the font-size in `dpkg-recongifure console-setup` to make sure the text is still clear even when the quality is reduced) can get a stable framerate.
 
-https://www.youtube.com/watch?v=xObCfv0EEIE
+You can use this to turn your smartphone into a Pi display in order to use your Pi on-the-go. You can see an example of this here: https://www.youtube.com/watch?v=TCD0oboQ4EQ
+
+The reason I made this fork is because the remote desktop applications require an X server to run and SSH only does the command-line interface but not graphical programs. What if you want something that can stream graphical programs that don't use X? Could not find anything, so I forked raspi2png and added the option here.
+
+I also added keyboard emulation. If "control" is set to 1 (e.g. `raspi2png stream 0.5 192.168.0.111 1`) then you can type in the browser window and it simulates those as keyboard presses on the Raspberry Pi. Seems to work great on the TTY but doesn't always work right within other software.
 
 
     Usage: raspi2png [--pngname name] [--width <width>] [--height <height>] [--compression <level>] [--delay <delay>] [--display <number>] [--stdout] [--help]
