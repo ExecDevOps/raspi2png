@@ -70,6 +70,10 @@ char VIEW_PAGE[] = ""\
 "			}\n"\
 "			var KEY_BUFF = new Array(0);\n"\
 "			var KEY_MAP = new Array(256);\n"\
+"			var T_SHIFT = 1;\n"\
+"			var T_CTRL = 2;\n"\
+"			var T_ALT = 3;\n"\
+"			var T_WIN = 4;\n"\
 "			var KEY_SHIFT = false;\n"\
 "			var KEY_CTRL = false;\n"\
 "			var KEY_ALT = false;\n"\
@@ -161,11 +165,16 @@ char VIEW_PAGE[] = ""\
 "					setTimeout(function(){keySend();}, 1);\n"\
 "					return;\n"\
 "				}\n"\
-"				var cmd = 'key=' + KEY_BUFF.splice(0, 1)[0];\n"\
-"				if (KEY_CTRL) cmd += '&hold=29';\n"\
-"				else if (KEY_ALT) cmd += '&hold=56';\n"\
-"				else if (KEY_SHIFT) cmd += '&hold=42';\n"\
-"				else if (KEY_WIN) cmd += '&hold=125';\n"\
+"				var keyToSend = KEY_BUFF.splice(0, 1)[0];\n"\
+"				var cmd = 'key=' + (keyToSend % 256);\n"\
+"				if ((keyToSend >> 8) != 0) {\n"\
+"					switch (keyToSend >> 8) {\n"\
+"						case T_CTRL: cmd += '&hold=29'; break;\n"\
+"						case T_ALT: cmd += '&hold=56'; break;\n"\
+"						case T_SHIFT: cmd += '&hold=42'; break;\n"\
+"						case T_WIN: cmd += '&hold=125'; break;\n"\
+"					}\n"\
+"				}\n"\
 "				var xhr = new XMLHttpRequest();\n"\
 "				xhr.open('POST', '/control', true);\n"\
 "				xhr.setRequestHeader('Content-Type', 'text/html');\n"\
@@ -187,28 +196,14 @@ char VIEW_PAGE[] = ""\
 "				else if (e.keyCode == 16) KEY_SHIFT = true;\n"\
 "				else if (e.keyCode == 91 || e.keyCode == 92) KEY_WIN = true;\n"\
 "				else if (KEY_MAP[e.keyCode] != undefined)\n"\
-"					KEY_BUFF.push(KEY_MAP[e.keyCode]);\n"\
+"					var keyToSend = KEY_MAP[e.keyCode]\n"\
+"					if (KEY_CTRL) keyToSend |= T_CTRL << 8;\n"\
+"					else if (KEY_ALT) keyToSend |= T_ALT << 8;\n"\
+"					else if (KEY_SHIFT) keyToSend |= T_SHIFT << 8;\n"\
+"					else if (KEY_WIN) keyToSend |= T_WIN << 8;\n"\
+"					KEY_BUFF.push(keyToSend);\n"\
 "				e.preventDefault();\n"\
 "				return false;\n"\
-/*"				switch (e.key) {\n"\
-"					case '1':\n"\
-"						canvas.style.width = '';\n"\
-"						canvas.style.height = '';\n"\
-"					break;\n"\
-"					case '2':\n"\
-"						canvas.style.width = '100%';\n"\
-"						canvas.style.height = '';\n"\
-"					break;\n"\
-"					case '3':\n"\
-"						canvas.style.width = '';\n"\
-"						canvas.style.height = '100%';\n"\
-"					break;\n"\
-"					case '4':\n"\
-"						canvas.style.width = '100%';\n"\
-"						canvas.style.height = '100%';\n"\
-"					break;\n"\
-"				}\n"\
-*/
 "			}\n"\
 "			var img = document.createElement('img');\n"\
 "			img_loaded = false;\n"\
