@@ -43,8 +43,201 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <microhttpd.h>
+#include <libevdev/libevdev.h>
+#include <libevdev/libevdev-uinput.h>
 #include "bcm_host.h"
-#include "view.c"
+
+char VIEW_PAGE[] = ""\
+"<html>\n"\
+"	<body>\n"\
+"		<script type='text/javascript'>\n"\
+"			var canvas = document.createElement('canvas');\n"\
+"			canvas.__init__ = false;\n"\
+"			var grafx = canvas.getContext('2d');\n"\
+"			canvas.style.position = 'absolute';\n"\
+"			canvas.style.top = '0px';\n"\
+"			canvas.style.left = '0px';\n"\
+"			canvas.style.height = '100%';\n"\
+"			canvas.style.width = '100%';\n"\
+"			var FULL_SCREEN = false;\n"\
+"			document.body.onmouseup = function(e) {\n"\
+"				FULL_SCREEN = !FULL_SCREEN;\n"\
+"				if (FULL_SCREEN) {\n"\
+"					document.body.requestFullscreen();\n"\
+"				} else {\n"\
+"					document.exitFullscreen();\n"\
+"				}\n"\
+"			}\n"\
+"			var KEY_BUFF = new Array(0);\n"\
+"			var KEY_MAP = new Array(256);\n"\
+"			var KEY_SHIFT = false;\n"\
+"			var KEY_CTRL = false;\n"\
+"			var KEY_ALT = false;\n"\
+"			var KEY_WIN = false;\n"\
+"			KEY_MAP[8] = 14;\n"\
+"			KEY_MAP[9] = 15;\n"\
+"			KEY_MAP[13] = 28;\n"\
+"			KEY_MAP[16] = 42;\n"\
+"			KEY_MAP[17] = 29;\n"\
+"			KEY_MAP[18] = 56;\n"\
+"			KEY_MAP[19] = 119;\n"\
+"			KEY_MAP[20] = 58;\n"\
+"			KEY_MAP[27] = 1;\n"\
+"			KEY_MAP[32] = 57;\n"\
+"			KEY_MAP[33] = 104;\n"\
+"			KEY_MAP[34] = 109;\n"\
+"			KEY_MAP[35] = 107;\n"\
+"			KEY_MAP[36] = 102;\n"\
+"			KEY_MAP[37] = 105;\n"\
+"			KEY_MAP[38] = 103;\n"\
+"			KEY_MAP[39] = 106;\n"\
+"			KEY_MAP[40] = 108;\n"\
+"			KEY_MAP[45] = 110;\n"\
+"			KEY_MAP[46] = 111;\n"\
+"			KEY_MAP[48] = 11;\n"\
+"			KEY_MAP[49] = 2;\n"\
+"			KEY_MAP[50] = 3;\n"\
+"			KEY_MAP[51] = 4;\n"\
+"			KEY_MAP[52] = 5;\n"\
+"			KEY_MAP[53] = 6;\n"\
+"			KEY_MAP[54] = 7;\n"\
+"			KEY_MAP[55] = 8;\n"\
+"			KEY_MAP[56] = 9;\n"\
+"			KEY_MAP[57] = 10;\n"\
+"			KEY_MAP[65] = 30;\n"\
+"			KEY_MAP[66] = 48;\n"\
+"			KEY_MAP[67] = 46;\n"\
+"			KEY_MAP[68] = 32;\n"\
+"			KEY_MAP[69] = 18;\n"\
+"			KEY_MAP[70] = 33;\n"\
+"			KEY_MAP[71] = 34;\n"\
+"			KEY_MAP[72] = 35;\n"\
+"			KEY_MAP[73] = 23;\n"\
+"			KEY_MAP[74] = 36;\n"\
+"			KEY_MAP[75] = 37;\n"\
+"			KEY_MAP[76] = 38;\n"\
+"			KEY_MAP[77] = 50;\n"\
+"			KEY_MAP[78] = 49;\n"\
+"			KEY_MAP[79] = 24;\n"\
+"			KEY_MAP[80] = 25;\n"\
+"			KEY_MAP[81] = 16;\n"\
+"			KEY_MAP[82] = 19;\n"\
+"			KEY_MAP[83] = 31;\n"\
+"			KEY_MAP[84] = 20;\n"\
+"			KEY_MAP[85] = 22;\n"\
+"			KEY_MAP[86] = 47;\n"\
+"			KEY_MAP[87] = 17;\n"\
+"			KEY_MAP[88] = 45;\n"\
+"			KEY_MAP[89] = 21;\n"\
+"			KEY_MAP[90] = 44;\n"\
+"			KEY_MAP[91] = 125;\n"\
+"			KEY_MAP[92] = 126;\n"\
+"			KEY_MAP[112] = 59;\n"\
+"			KEY_MAP[113] = 60;\n"\
+"			KEY_MAP[114] = 61;\n"\
+"			KEY_MAP[115] = 62;\n"\
+"			KEY_MAP[116] = 63;\n"\
+"			KEY_MAP[117] = 64;\n"\
+"			KEY_MAP[118] = 65;\n"\
+"			KEY_MAP[119] = 66;\n"\
+"			KEY_MAP[120] = 67;\n"\
+"			KEY_MAP[121] = 68;\n"\
+"			KEY_MAP[122] = 87;\n"\
+"			KEY_MAP[123] = 88;\n"\
+"			KEY_MAP[186] = 39;\n"\
+"			KEY_MAP[187] = 13;\n"\
+"			KEY_MAP[188] = 51;\n"\
+"			KEY_MAP[189] = 12;\n"\
+"			KEY_MAP[190] = 52;\n"\
+"			KEY_MAP[191] = 53;\n"\
+"			KEY_MAP[192] = 41;\n"\
+"			KEY_MAP[219] = 26;\n"\
+"			KEY_MAP[220] = 43;\n"\
+"			KEY_MAP[221] = 27;\n"\
+"			KEY_MAP[222] = 40;\n"\
+"\n"\
+"			var keySend = function() {\n"\
+"				if (KEY_BUFF.length == 0) {\n"\
+"					setTimeout(function(){keySend();}, 1);\n"\
+"					return;\n"\
+"				}\n"\
+"				var cmd = 'key=' + KEY_BUFF.splice(0, 1)[0];\n"\
+"				if (KEY_CTRL) cmd += '&hold=29';\n"\
+"				else if (KEY_ALT) cmd += '&hold=56';\n"\
+"				else if (KEY_SHIFT) cmd += '&hold=42';\n"\
+"				else if (KEY_WIN) cmd += '&hold=125';\n"\
+"				var xhr = new XMLHttpRequest();\n"\
+"				xhr.open('POST', '/control', true);\n"\
+"				xhr.setRequestHeader('Content-Type', 'text/html');\n"\
+"				xhr.onload = function() {keySend();}\n"\
+"				xhr.send(cmd);\n"\
+"			}\n"\
+"			keySend();\n"\
+"			document.body.onkeyup = function(e) {\n"\
+"				if (e.keyCode == 17) KEY_CTRL = false;\n"\
+"				else if (e.keyCode == 18) KEY_ALT = false;\n"\
+"				else if (e.keyCode == 16) KEY_SHIFT = false;\n"\
+"				else if (e.keyCode == 91 || e.keyCode == 92) KEY_WIN = false;\n"\
+"				e.preventDefault();\n"\
+"				return false;\n"\
+"			}\n"\
+"			document.body.onkeydown = function(e) {\n"\
+"				if (e.keyCode == 17) KEY_CTRL = true;\n"\
+"				else if (e.keyCode == 18) KEY_ALT = true;\n"\
+"				else if (e.keyCode == 16) KEY_SHIFT = true;\n"\
+"				else if (e.keyCode == 91 || e.keyCode == 92) KEY_WIN = true;\n"\
+"				else if (KEY_MAP[e.keyCode] != undefined)\n"\
+"					KEY_BUFF.push(KEY_MAP[e.keyCode]);\n"\
+"				e.preventDefault();\n"\
+"				return false;\n"\
+/*"				switch (e.key) {\n"\
+"					case '1':\n"\
+"						canvas.style.width = '';\n"\
+"						canvas.style.height = '';\n"\
+"					break;\n"\
+"					case '2':\n"\
+"						canvas.style.width = '100%';\n"\
+"						canvas.style.height = '';\n"\
+"					break;\n"\
+"					case '3':\n"\
+"						canvas.style.width = '';\n"\
+"						canvas.style.height = '100%';\n"\
+"					break;\n"\
+"					case '4':\n"\
+"						canvas.style.width = '100%';\n"\
+"						canvas.style.height = '100%';\n"\
+"					break;\n"\
+"				}\n"\
+*/
+"			}\n"\
+"			var img = document.createElement('img');\n"\
+"			img_loaded = false;\n"\
+"			img.style.display = 'none';\n"\
+"			document.body.appendChild(canvas);\n"\
+"			img.onload = function() {\n"\
+"				if (!canvas.__init__) {\n"\
+"					canvas.width = img.width;\n"\
+"					canvas.height = img.height;\n"\
+"					canvas.__init__ = true;\n"\
+"				}\n"\
+"				grafx.drawImage(img, 0, 0);\n"\
+"				img_loaded = true;\n"\
+"			}\n"\
+"			document.body.appendChild(img);\n"\
+"			function refreshImage() {\n"\
+"				img_loaded = false;\n"\
+"				img.src = '/screen?time=' + new Date().getTime();\n"\
+"			}\n"\
+"			setInterval(function() {\n"\
+"				if (img_loaded) {\n"\
+"					refreshImage();\n"\
+"				}\n"\
+"			}, 1);\n"\
+"			refreshImage();\n"\
+"		</script>\n"\
+"	</body>\n"\
+"</html>";
+
 
 //-----------------------------------------------------------------------
 
@@ -59,6 +252,9 @@
 #define DEFAULT_NAME "snapshot.png"
 //-----------------------------------------------------------------------
 
+int KEYBOARD_ENABLED = 0;
+int KEYBOARD_OPEN = 0;
+int POST_OPEN = 0;
 const char* program = NULL;
 
 //-----------------------------------------------------------------------
@@ -103,8 +299,9 @@ usage(void)
 
     fprintf(stderr, "    %s stream - Start streaming on port 8888\n", program);
     fprintf(stderr, "    %s stream [port] - Start streaming on port [port]\n", program);
-    fprintf(stderr, "    %s stream [port] [scale] - Scale the resolution by a factor\n", program);
-    fprintf(stderr, "    %s stream [port] [scale] [ip_addr] - Only allow a specific IP to connect\n", program);
+    fprintf(stderr, "    %s stream [port] [quality] - Stream quality, e.g. 0.5 for 50%c or 1 for 100%c\n", program, '%', '%');
+    fprintf(stderr, "    %s stream [port] [quality] [ip_addr] - Only allow a specific IP to connect\n", program);
+    fprintf(stderr, "    %s stream [port] [quality] [ip_addr] [control] - Use 1 for the control to enable keyboard input\n", program);
     fprintf(stderr, "    %s stop - Stop streaming\n", program);
     fprintf(stderr, "\n");
 }
@@ -645,6 +842,47 @@ int stopStream(int verbose) {
 	remove(fpath);
 	return 0;
 }
+
+void SendKey(unsigned short key, int hold) {
+	if (!KEYBOARD_ENABLED) {
+		return;
+	}
+	if (KEYBOARD_OPEN) {
+		fprintf(stderr, "Attempt to write to keyboard while it is open.\n");
+		return;
+	}
+	KEYBOARD_OPEN = 1;
+	struct libevdev *dev;
+	struct libevdev_uinput *uidev;
+	dev = libevdev_new();
+	libevdev_set_name(dev, "rapsi2png keyboard");
+	libevdev_enable_event_type(dev, EV_KEY);
+	libevdev_enable_event_code(dev, EV_KEY, key, NULL);
+	if (hold > 0) {
+		libevdev_enable_event_code(dev, EV_KEY, hold, NULL);
+	}
+	int err = libevdev_uinput_create_from_device(dev, LIBEVDEV_UINPUT_OPEN_MANAGED, &uidev);
+	if (err != 0) {
+		printf("err\n");
+		return;
+	}
+
+	if (hold > 0) {
+		libevdev_uinput_write_event(uidev, EV_KEY, hold, 1);
+		libevdev_uinput_write_event(uidev, EV_SYN, SYN_REPORT, 0);
+	}
+	libevdev_uinput_write_event(uidev, EV_KEY, key, 1);
+	libevdev_uinput_write_event(uidev, EV_SYN, SYN_REPORT, 0);
+	libevdev_uinput_write_event(uidev, EV_KEY, key, 0);
+	libevdev_uinput_write_event(uidev, EV_SYN, SYN_REPORT, 0);
+	if (hold > 0) {
+		libevdev_uinput_write_event(uidev, EV_KEY, hold, 0);
+		libevdev_uinput_write_event(uidev, EV_SYN, SYN_REPORT, 0);
+	}
+	libevdev_uinput_destroy(uidev);
+	KEYBOARD_OPEN = 0;
+}
+
 /*int ConnInfo_Callback(
 	void *cls,
 	enum MHD_ValueKind kind,
@@ -725,13 +963,18 @@ int ConnProc_Callback(
 		static char* data;
 		static size_t data_size;
 		if (*con_cls == (void*)0) {
+			if (POST_OPEN) {
+				fprintf(stderr, "POST requests sent too fast.");
+				return MHD_NO;
+			}
 			*con_cls = (void*)1;
 			data = malloc(0);
 			data_size = 0;
+			POST_OPEN = 1;
 			return MHD_YES;
 		} else if (*upload_data_size > 0) {
 			data_size += *upload_data_size;
-			if (realloc(data, data_size) == NULL) {
+			if ((data = realloc(data, data_size)) == NULL) {
 				fprintf(stderr, "Severe memory error.\n");
 				stopStream(0);
 				exit(1);
@@ -740,12 +983,45 @@ int ConnProc_Callback(
 			*upload_data_size = 0; //this is necessary for the next recursion to be called
 			return MHD_YES;
 		} else {
-			if (realloc(data, data_size + 1) == NULL) {
+			if ((data = realloc(data, data_size + 1)) == NULL) {
 				fprintf(stderr, "Severe memory error.\n");
 				stopStream(0);
 				exit(1);
 			}
 			data[data_size] = 0;
+			const int maxKeys = 4;
+			int pos[maxKeys * 2];
+			int dataFound = 0;
+			if (data_size > 0) {
+				pos[0] = 0;
+				dataFound = 1;
+			}
+			for (int i = 1; i < data_size; i++) {
+				if (data[i] == '&' || data[i] == '=') {
+					if (i < data_size - 1) {
+						pos[dataFound++] = i + 1;
+					}
+					data[i] = 0;
+					if (dataFound >= maxKeys * 2) {
+						break;
+					}
+				}
+			}
+			int keyToSend = -1;
+			int keyHold = -1;
+			for (int i = 0; i < dataFound - (dataFound % 2); i += 2) {
+				char *key = data + pos[i];
+				char *val = data + pos[i + 1];
+				if (strcmp(key, "key") == 0) {
+					keyToSend = atoi(val);
+				}
+				if (strcmp(key, "hold") == 0) {
+					keyHold = atoi(val);
+				}
+			}
+			if (keyToSend != -1) {
+				SendKey(keyToSend, keyHold);
+			}
 			free(data);
 			response = MHD_create_response_from_buffer(
 				strlen(pageNotFound),
@@ -753,6 +1029,7 @@ int ConnProc_Callback(
 				MHD_RESPMEM_PERSISTENT
 			);
 			ret = MHD_queue_response(conn, MHD_HTTP_OK, response);
+			POST_OPEN = 0;
 		}
 	}
 	if (response != NULL) {
@@ -793,6 +1070,11 @@ int stream(int argc, char** argv) {
 	}
 	if (argc >= 5) {
 		memcpy(ALLOWED_IP, argv[4], strlen(argv[4]) + 1);
+	}
+	if (argc >= 6) {
+		if (argv[5][0] == '1') {
+			KEYBOARD_ENABLED = 1;
+		}
 	}
 	//printf("Starting stream on port %i...", port);
 	struct MHD_Daemon* d = MHD_start_daemon(
