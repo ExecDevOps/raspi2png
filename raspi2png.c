@@ -863,8 +863,9 @@ void SendKey(unsigned short key, int hold) {
 	}
 	int err = libevdev_uinput_create_from_device(dev, LIBEVDEV_UINPUT_OPEN_MANAGED, &uidev);
 	if (err != 0) {
-		printf("err\n");
-		return;
+		fprintf(stderr, "Keyboard emulation failed (run using sudo?).\n");
+		stopStream(0);
+		exit(1);
 	}
 
 	if (hold > 0) {
