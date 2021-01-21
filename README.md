@@ -8,7 +8,7 @@ You can use this to turn your smartphone into a Pi display in order to use your 
 
 The reason I made this fork is because the remote desktop applications require an X server to run and SSH only does the command-line interface but not graphical programs. What if you want something that can stream graphical programs that don't use X? Could not find anything, so I forked raspi2png and added the option here.
 
-I also added keyboard emulation. If "control" is set to 1 (e.g. `raspi2png stream 8888 0.5 192.168.0.111 1`) then you can type in the browser window and it simulates those as keyboard presses on the Raspberry Pi. Seems to work great on the TTY but doesn't always work right within other software.
+I also added keyboard emulation. If "control" is set to 1 (e.g. `raspi2png stream 8888 0.5 192.168.0.111 1`) then you can type in the browser window and it simulates those as keyboard presses on the Raspberry Pi. 
 
     Usage: raspi2png [--pngname name] [--width <width>] [--height <height>] [--compression <level>] [--delay <delay>] [--display <number>] [--stdout] [--help]
     
