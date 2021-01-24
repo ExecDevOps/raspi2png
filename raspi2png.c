@@ -219,10 +219,18 @@ char VIEW_PAGE[] = ""\
 "				img_loaded = true;\n"\
 "			}\n"\
 "			document.body.appendChild(img);\n"\
-"			function refreshImage() {\n"\
-"				img_loaded = false;\n"\
-"				img.src = '/screen?time=' + new Date().getTime();\n"\
-"			}\n"\
+"                       function sleep(milliseconds) {\n"\
+"                               const date = Date.now();\n"\
+"                               let currentDate = null;\n"\
+"                               do {\n"\
+"                                 currentDate = Date.now();\n"\
+"                               } while (currentDate - date < milliseconds);\n"\
+"                       }\n"\
+"                       function refreshImage() {\n"\
+"                               img_loaded = false;\n"\
+"                               sleep(100);\n"\
+"                               img.src = '/screen?time=' + new Date().getTime();\n"\
+"                       }\n"\
 "			setInterval(function() {\n"\
 "				if (img_loaded) {\n"\
 "					refreshImage();\n"\
@@ -1087,7 +1095,10 @@ int stream(int argc, char** argv) {
 		stopStream(0);
 		return 1;
 	}
-	while (true);
+        while (true)
+        {
+                sleep(1);
+        }
 	MHD_stop_daemon(d);
 	return 0;
 }
